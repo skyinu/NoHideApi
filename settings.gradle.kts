@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "NoHideApi"
-include ':app'
+include(":app")
