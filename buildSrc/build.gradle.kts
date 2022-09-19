@@ -20,4 +20,12 @@ plugins {
 
 repositories {
     gradlePluginPortal()
+    mavenCentral()
+}
+
+dependencies{
+    implementation(gradleApi())
+    implementation(gradleKotlinDsl())
+    implementation("org.ow2.asm:asm:9.3")
+    implementation("com.github.javaparser:javaparser-symbol-solver-core:3.24.2")
 }
