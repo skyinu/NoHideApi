@@ -8,7 +8,7 @@ object PlatformUtils {
      */
     fun findAndroidSourceDirByAndroidJar(jar: File): List<String> {
         val platformVersion = jar.parentFile.name
-        val baseDir = jar.parentFile.parentFile.absolutePath +
+        val baseDir = jar.parentFile.parentFile.parentFile.absolutePath +
                 "${File.separator}sources${File.separator}$platformVersion"
         return arrayListOf("$baseDir${File.separator}android")
     }
