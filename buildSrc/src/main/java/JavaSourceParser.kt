@@ -5,6 +5,7 @@ import com.github.javaparser.ast.body.FieldDeclaration
 import com.github.javaparser.ast.body.MethodDeclaration
 
 class JavaSourceParser(private val compilationUnit: CompilationUnit) {
+    private val hideApiClassModelMap = mutableMapOf<String, HideApiClassModel>()
 
     fun parse() {
         if (compilationUnit.packageDeclaration.isEmpty) {

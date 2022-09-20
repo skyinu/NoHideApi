@@ -3,6 +3,7 @@ import java.io.File
 import kotlin.streams.asStream
 
 class HideApiCollector {
+    private val hideApiClassModelMap = mutableMapOf<String, HideApiClassModel>()
     fun collect(sourceDir: List<String>) {
         sourceDir.stream().sequential().forEach {
             val sourceDirFile = File(it)
