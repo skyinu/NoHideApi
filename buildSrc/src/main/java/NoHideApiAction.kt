@@ -25,16 +25,21 @@ abstract class NoHideApiAction : TransformAction<TransformParameters.None> {
     override fun transform(outputs: TransformOutputs) {
         val input: File = getInputArtifact().get().asFile
         if (input.name.equals(PlatformUtils.ANDROID_JAR, true)) {
+            val backup = File(input.parentFile, input.name + ".bark")
             val output = outputs.file(input.name + ".transformed")
-            println("start process ${input.absolutePath} to ${output.absolutePath}")
-            val hideApiCollector = HideApiCollector()
-            val hideApiClassModelMap =
-                hideApiCollector.collect(PlatformUtils.findAndroidSourceDirByAndroidJar(input))
-            processAndroidJar(
-                hideApiClassModelMap,
-                input,
-                output
-            )
+            println("start process file ${input.absolutePath}\n to ${output.absolutePath} \nand backup is ${backup.absolutePath}")
+            if (!backup.exists()) {
+                input.copyTo(backup, true)
+                val hideApiCollector = HideApiCollector()
+                val hideApiClassModelMap =
+                    hideApiCollector.collect(PlatformUtils.findAndroidSourceDirByAndroidJar(input))
+                processAndroidJar(
+                    hideApiClassModelMap,
+                    backup,
+                    input
+                )
+            }
+            input.copyTo(output, true)
         } else {
             outputs.file(getInputArtifact())
         }

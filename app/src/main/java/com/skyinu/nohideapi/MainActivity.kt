@@ -1,6 +1,7 @@
 package com.skyinu.nohideapi
 
 import android.os.Bundle
+import android.os.StrictMode
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -31,7 +32,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String) {
-    Text(text = "Hello $name!")
+    StrictMode.enableDeathOnFileUriExposure()
+    Text(text = "Hello $name! ")
 }
 
 @Preview(showBackground = true)

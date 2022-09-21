@@ -80,6 +80,10 @@ class JavaSourceParser(private val compilationUnit: CompilationUnit) {
         val access = Utils.modifierToAccess(methodDeclaration.modifiers)
         val name = methodDeclaration.nameAsString
         val desc = Utils.getMethodDescriptor(methodDeclaration)
+        //TODO
+        if(desc.contains("L")){
+            return
+        }
         val methodModel = MethodModel(access, name, desc, null)
         hideApiClassModel.methodModels.add(methodModel)
     }

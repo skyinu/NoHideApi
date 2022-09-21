@@ -12,6 +12,7 @@ class NoHideClassVisitor(
     }
 
     private var hideApiClassModel: HideApiClassModel? = null
+    private var methodList = arrayListOf<String>()
     override fun visit(
         version: Int,
         access: Int,
@@ -23,9 +24,6 @@ class NoHideClassVisitor(
         super.visit(version, access, name, signature, superName, interfaces)
         val fullName = name?.replace(REPLACE_REGEX, ".") ?: ""
         hideApiClassModel = hideApiClassModelMap[fullName]
-        hideApiClassModel?.let {
-            println("$fullName field count ${it.fieldModels.size} method count ${it.methodModels.size}")
-        }
     }
 
     override fun visitField(
@@ -45,6 +43,7 @@ class NoHideClassVisitor(
         signature: String?,
         exceptions: Array<out String>?
     ): MethodVisitor {
+        methodList.add(name ?: "")
         return super.visitMethod(access, name, descriptor, signature, exceptions)
     }
 
@@ -54,10 +53,38 @@ class NoHideClassVisitor(
         if (hideApiClassModel == null) {
             return
         }
-        hideApiClassModel?.methodModels?.forEach {
-            val methodVisitor = cv.visitMethod(it.access, it.name, it.descriptor, null, null)
-            methodVisitor.visitMaxs(0, 0)
-            methodVisitor.visitEnd()
+        hideApiClassModel?.fieldModels?.forEach {
+            addField(it)
         }
+        hideApiClassModel?.methodModels?.forEach {
+            addMethod(it)
+        }
+    }
+
+    private fun addField(fieldModel: FieldModel) {
+    }
+
+    private fun addMethod(methodModel: MethodModel) {
+        if (methodList.contains(methodModel.name)) {
+            println("interesting method ${methodModel.name} of ${hideApiClassModel?.className}")
+            return
+        }
+        val methodVisitor =
+            cv.visitMethod(methodModel.access, methodModel.name, methodModel.descriptor, null, null)
+        methodVisitor.visitCode()
+        methodVisitor.visitTypeInsn(Opcodes.NEW, "java/lang/RuntimeException")
+        methodVisitor.visitInsn(Opcodes.DUP)
+        methodVisitor.visitLdcInsn("hide stub")
+        methodVisitor.visitMethodInsn(
+            Opcodes.INVOKESPECIAL,
+            "java/lang/RuntimeException",
+            "<init>",
+            "(Ljava/lang/String;)V",
+            false
+        )
+        methodVisitor.visitTypeInsn(Opcodes.CHECKCAST, "java/lang/Throwable")
+        methodVisitor.visitInsn(Opcodes.ATHROW)
+        methodVisitor.visitMaxs(3, 1)
+        methodVisitor.visitEnd()
     }
 }
