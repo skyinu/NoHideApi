@@ -3,7 +3,15 @@ import org.objectweb.asm.FieldVisitor
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
 
-class NoHideClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opcodes.ASM9, classVisitor) {
+class NoHideClassVisitor(
+    private val hideApiClassModelMap: Map<String, HideApiClassModel>,
+    classVisitor: ClassVisitor?
+) : ClassVisitor(Opcodes.ASM9, classVisitor) {
+    companion object {
+        private val REPLACE_REGEX = "[/$]".toRegex()
+    }
+
+    private var hideApiClassModel: HideApiClassModel? = null
     override fun visit(
         version: Int,
         access: Int,
@@ -13,6 +21,11 @@ class NoHideClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opcodes.ASM
         interfaces: Array<out String>?
     ) {
         super.visit(version, access, name, signature, superName, interfaces)
+        val fullName = name?.replace(REPLACE_REGEX, ".") ?: ""
+        hideApiClassModel = hideApiClassModelMap[fullName]
+        hideApiClassModel?.let {
+            println("$fullName field count ${it.fieldModels.size} method count ${it.methodModels.size}")
+        }
     }
 
     override fun visitField(
@@ -38,5 +51,13 @@ class NoHideClassVisitor(classVisitor: ClassVisitor?) : ClassVisitor(Opcodes.ASM
 
     override fun visitEnd() {
         super.visitEnd()
+        if (hideApiClassModel == null) {
+            return
+        }
+        hideApiClassModel?.methodModels?.forEach {
+            val methodVisitor = cv.visitMethod(it.access, it.name, it.descriptor, null, null)
+            methodVisitor.visitMaxs(0, 0)
+            methodVisitor.visitEnd()
+        }
     }
 }

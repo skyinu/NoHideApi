@@ -1,20 +1,34 @@
 import com.github.javaparser.StaticJavaParser
+import com.github.javaparser.symbolsolver.JavaSymbolSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.JavaParserTypeSolver
+import com.github.javaparser.symbolsolver.resolution.typesolvers.ReflectionTypeSolver
 import java.io.File
 import kotlin.streams.asStream
 
+
 class HideApiCollector {
     private val hideApiClassModelMap = mutableMapOf<String, HideApiClassModel>()
-    fun collect(sourceDir: List<String>) {
+    fun collect(sourceDir: List<String>): Map<String, HideApiClassModel> {
+        val typeSolver = CombinedTypeSolver(ReflectionTypeSolver(false))
+        sourceDir.forEach {
+            typeSolver.add(JavaParserTypeSolver(it))
+        }
+        val symbolSolver = JavaSymbolSolver(typeSolver)
+        StaticJavaParser.getConfiguration().setSymbolResolver(symbolSolver)
         sourceDir.stream().sequential().forEach {
             val sourceDirFile = File(it)
             println("start collect in ${sourceDirFile.absolutePath}")
             sourceDirFile.walkBottomUp().asStream().sequential()
                 .filter { item -> item.isFile }
                 .forEach { javaFile ->
-                    val cu = StaticJavaParser.parse(javaFile)
-                    val javaSourceParser = JavaSourceParser(cu)
-                    javaSourceParser.parse()
+                    if (javaFile.name.endsWith(".java")) {
+                        val cu = StaticJavaParser.parse(javaFile)
+                        val javaSourceParser = JavaSourceParser(cu)
+                        hideApiClassModelMap.putAll(javaSourceParser.parse())
+                    }
                 }
         }
+        return hideApiClassModelMap
     }
 }

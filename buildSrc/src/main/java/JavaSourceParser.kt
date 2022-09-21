@@ -7,22 +7,24 @@ import com.github.javaparser.ast.body.MethodDeclaration
 class JavaSourceParser(private val compilationUnit: CompilationUnit) {
     private val hideApiClassModelMap = mutableMapOf<String, HideApiClassModel>()
 
-    fun parse() {
+    fun parse(): Map<String, HideApiClassModel> {
         if (compilationUnit.packageDeclaration.isEmpty) {
-            return
+            return hideApiClassModelMap
         }
         val packageName = compilationUnit.packageDeclaration.get().name
         compilationUnit.childNodes.filterIsInstance<ClassOrInterfaceDeclaration>().forEach {
             parseClassNode(packageName.asString(), it)
         }
+        return hideApiClassModelMap
     }
 
     private fun parseClassNode(
         hostName: String,
         classOrInterfaceDeclaration: ClassOrInterfaceDeclaration
     ) {
-        val className = "$hostName.${classOrInterfaceDeclaration.name}"
-        var superClassName = ""
+        val className = kotlin.runCatching { classOrInterfaceDeclaration.resolve().qualifiedName }
+            .getOrDefault("$hostName.${classOrInterfaceDeclaration.name}")
+        var superClassName: String? = null
         if (classOrInterfaceDeclaration.extendedTypes.isNonEmpty) {
             superClassName =
                 findReferenceWithImport(classOrInterfaceDeclaration.extendedTypes[0].nameAsString)
@@ -31,35 +33,55 @@ class JavaSourceParser(private val compilationUnit: CompilationUnit) {
         classOrInterfaceDeclaration.implementedTypes.forEach {
             implementInterfaceName.add(findReferenceWithImport(it.nameAsString))
         }
+        val access = Utils.modifierToAccess(classOrInterfaceDeclaration.modifiers)
+        val hideApiClassModel =
+            HideApiClassModel(className, access, superClassName, implementInterfaceName)
+        hideApiClassModelMap[className] = hideApiClassModel
         classOrInterfaceDeclaration.childNodes.forEach {
             when (it) {
                 is ClassOrInterfaceDeclaration -> {
                     parseClassNode(className, it)
                 }
                 is FieldDeclaration -> {
-                    parseField(it)
+                    parseField(hideApiClassModel, it)
                 }
                 is MethodDeclaration -> {
-                    parseMethod(it)
+                    parseMethod(hideApiClassModel, it)
                 }
             }
         }
+        if (hideApiClassModel.fieldModels.isEmpty() && hideApiClassModel.methodModels.isEmpty()) {
+            hideApiClassModelMap.remove(className)
+        }
     }
 
-    private fun parseField(fieldDeclaration: FieldDeclaration) {
+    private fun parseField(
+        hideApiClassModel: HideApiClassModel,
+        fieldDeclaration: FieldDeclaration
+    ) {
         if (!isHideApi(fieldDeclaration)) {
             return
         }
-        fieldDeclaration.modifiers.forEach {
-        }
+        val access = Utils.modifierToAccess(fieldDeclaration.modifiers)
         fieldDeclaration.variables.forEach {
+            val name = it.name.asString()
+            val fieldModel = FieldModel(access, name, Utils.typeToDescriptor(it.type))
+            hideApiClassModel.fieldModels.add(fieldModel)
         }
     }
 
-    private fun parseMethod(methodDeclaration: MethodDeclaration) {
+    private fun parseMethod(
+        hideApiClassModel: HideApiClassModel,
+        methodDeclaration: MethodDeclaration
+    ) {
         if (!isHideApi(methodDeclaration)) {
             return
         }
+        val access = Utils.modifierToAccess(methodDeclaration.modifiers)
+        val name = methodDeclaration.nameAsString
+        val desc = Utils.getMethodDescriptor(methodDeclaration)
+        val methodModel = MethodModel(access, name, desc, null)
+        hideApiClassModel.methodModels.add(methodModel)
     }
 
     private fun isHideApi(node: Node): Boolean {
