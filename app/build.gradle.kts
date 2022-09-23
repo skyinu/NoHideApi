@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-//    id("com.skyinu.nohideapi")
+    id("com.skyinu.nohideapi")
 }
 val composeVersion = "1.1.0-beta01"
 

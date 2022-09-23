@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String) {
-//    StrictMode.enableDeathOnFileUriExposure()
+    StrictMode.enableDeathOnFileUriExposure()
     Text(text = "Hello $name! ")
 }
 

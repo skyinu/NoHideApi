@@ -5,6 +5,10 @@ buildscript {
         maven { url = uri("https://jitpack.io") }
         mavenLocal()
     }
+    //https://github.com/google/iosched/blob/main/build.gradle.kts
+    dependencies {
+        classpath("com.github.skyinu.NoHideApi:nohideapiplugin:0.1.1")
+    }
 }// Top-level build file where you can add configuration options common to all sub-projects/modules.
 allprojects {
     repositories {
