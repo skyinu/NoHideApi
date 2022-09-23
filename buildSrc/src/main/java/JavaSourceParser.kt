@@ -26,12 +26,16 @@ class JavaSourceParser(private val compilationUnit: CompilationUnit) {
             .getOrDefault("$hostName.${classOrInterfaceDeclaration.name}")
         var superClassName: String? = null
         if (classOrInterfaceDeclaration.extendedTypes.isNonEmpty) {
-            superClassName =
-                findReferenceWithImport(classOrInterfaceDeclaration.extendedTypes[0].nameAsString)
+            kotlin.runCatching {
+                superClassName =
+                    findReferenceWithImport(classOrInterfaceDeclaration.extendedTypes[0].nameAsString)
+            }
         }
         val implementInterfaceName = arrayListOf<String>()
         classOrInterfaceDeclaration.implementedTypes.forEach {
-            implementInterfaceName.add(findReferenceWithImport(it.nameAsString))
+            kotlin.runCatching {
+                implementInterfaceName.add(findReferenceWithImport(it.nameAsString))
+            }
         }
         val access = Utils.modifierToAccess(classOrInterfaceDeclaration.modifiers)
         val hideApiClassModel =
@@ -64,9 +68,14 @@ class JavaSourceParser(private val compilationUnit: CompilationUnit) {
         }
         val access = Utils.modifierToAccess(fieldDeclaration.modifiers)
         fieldDeclaration.variables.forEach {
-            val name = it.name.asString()
-            val fieldModel = FieldModel(access, name, Utils.typeToDescriptor(it.type))
-            hideApiClassModel.fieldModels.add(fieldModel)
+            kotlin.runCatching {
+                val name = it.name.asString()
+                val fieldModel =
+                    FieldModel(access, name, Utils.typeToDescriptor(it.type) { simpleName ->
+                        return@typeToDescriptor findReferenceWithImport(simpleName)
+                    })
+                hideApiClassModel.fieldModels.add(fieldModel)
+            }
         }
     }
 
@@ -79,11 +88,12 @@ class JavaSourceParser(private val compilationUnit: CompilationUnit) {
         }
         val access = Utils.modifierToAccess(methodDeclaration.modifiers)
         val name = methodDeclaration.nameAsString
-        val desc = Utils.getMethodDescriptor(methodDeclaration)
-        //TODO
-        if(desc.contains("L")){
-            return
-        }
+        val desc = kotlin.runCatching {
+            Utils.getMethodDescriptor(methodDeclaration) {
+                return@getMethodDescriptor findReferenceWithImport(it)
+            }
+        }.onFailure {
+        }.getOrNull() ?: return
         val methodModel = MethodModel(access, name, desc, null)
         hideApiClassModel.methodModels.add(methodModel)
     }
@@ -101,6 +111,10 @@ class JavaSourceParser(private val compilationUnit: CompilationUnit) {
                 return it.name.asString()
             }
         }
-        return "${compilationUnit.packageDeclaration.get().name}.$name"
+        val packageName = compilationUnit.packageDeclaration.get().name.asString()
+        if (name.startsWith(packageName)) {
+            return name
+        }
+        throw RuntimeException("can't find ${name}'s  reference in $packageName")
     }
 }

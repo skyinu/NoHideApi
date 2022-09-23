@@ -16,16 +16,29 @@
 
 plugins {
     `kotlin-dsl`
+    `maven-publish`
 }
 
 repositories {
     gradlePluginPortal()
     mavenCentral()
+    maven { url = uri("https://jitpack.io") }
 }
 
-dependencies{
+dependencies {
     implementation(gradleApi())
     implementation(gradleKotlinDsl())
     implementation("org.ow2.asm:asm:9.3")
     implementation("com.github.javaparser:javaparser-symbol-solver-core:3.24.2")
+}
+//https://docs.gradle.org/current/userguide/publishing_maven.html
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = "com.skyinu"
+            artifactId = "nohideapiplugin"
+            version = "0.1"
+            from(components["java"])
+        }
+    }
 }

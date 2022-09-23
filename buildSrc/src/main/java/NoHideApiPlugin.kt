@@ -5,6 +5,8 @@ import org.gradle.api.attributes.Attribute
 class NoHideApiPlugin:Plugin<Project> {
     override fun apply(project: Project) {
         println("no hide api plugin run")
+        Config.enable =
+            project.properties.getOrDefault(Config.ENABLE, "false").toString().toBoolean()
         val artifactType = Attribute.of("nohideapi", Boolean::class.javaObjectType)
         project.dependencies.attributesSchema.attribute(artifactType)
         project.dependencies

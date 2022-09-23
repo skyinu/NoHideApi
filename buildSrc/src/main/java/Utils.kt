@@ -59,7 +59,10 @@ object Utils {
         return access
     }
 
-    fun typeToDescriptor(clazz: com.github.javaparser.ast.type.Type): String {
+    fun typeToDescriptor(
+        clazz: com.github.javaparser.ast.type.Type,
+        fullNameSupport: ((String) -> String)
+    ): String {
         val stringBuilder: StringBuilder = java.lang.StringBuilder()
         var currentClass = clazz
         while (currentClass.isArrayType) {
@@ -100,7 +103,9 @@ object Utils {
         } else if (currentClass.isVoidType) {
             stringBuilder.append('V')
         } else {
-            stringBuilder.append('L').append(getInternalName(currentClass.asString())).append(';')
+            stringBuilder.append('L')
+                .append(getInternalName(fullNameSupport.invoke(currentClass.asString())))
+                .append(';')
         }
         return stringBuilder.toString()
     }
@@ -109,15 +114,18 @@ object Utils {
         return clazz.replace('.', '/')
     }
 
-    fun getMethodDescriptor(method: MethodDeclaration): String {
+    fun getMethodDescriptor(
+        method: MethodDeclaration,
+        fullNameSupport: ((String) -> String)
+    ): String {
         val stringBuilder = java.lang.StringBuilder()
         stringBuilder.append('(')
         val parameters = method.parameters
         for (parameter in parameters) {
-            stringBuilder.append(typeToDescriptor(parameter.type))
+            stringBuilder.append(typeToDescriptor(parameter.type, fullNameSupport))
         }
         stringBuilder.append(')')
-        stringBuilder.append(typeToDescriptor(method.type))
+        stringBuilder.append(typeToDescriptor(method.type, fullNameSupport))
         return stringBuilder.toString()
     }
 }
